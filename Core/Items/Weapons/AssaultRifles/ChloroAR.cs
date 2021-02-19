@@ -23,15 +23,10 @@ namespace RangersArsenal.Core.Items.Weapons.AssaultRifles //Such namescape
             item.damage     = 23;
             item.crit       = 6;
             item.knockBack  = 1;
-            item.shootSpeed = 13f;
             
             item.width  = 66;
             item.height = 28;
             item.scale  = 1f;
-            
-            item.useTime      = 3;
-            item.useAnimation = 12;
-            item.reuseDelay   = 14;
             
             item.value = 165000;
             item.rare  = ItemRarityID.Yellow;
@@ -39,22 +34,18 @@ namespace RangersArsenal.Core.Items.Weapons.AssaultRifles //Such namescape
             base.SetDefaults();
         }
 
-        protected override GunSettings GetGunSettings()
-        {
-            return new GunSettings() {
+        protected override GunSettings GunSettings =>
+            new GunSettings {
+                useTime              = 3,
                 useSound             = mod.GetLegacySoundSlot(SoundType.Item, "Sounds/Item/Item_31_4"),
-                spreadAngle          = 1f,
-                isFullAuto           = true,
                 isBurstFire          = true,
                 isFiresExtraRockets  = true,
                 convertedBulletType  = ProjectileID.BulletHighVelocity,
-                ammoSaveChance       = 0f,
                 burstCount           = 4,
                 rocketProjectileType = mod.ProjectileType("SpikeBall"),
                 burstsBetweenRockets = 1,
-                rocketDamage         = 20,
+                rocketDamage         = item.damage,
             };
-        }
 
         public override Vector2? HoldoutOffset()
         {

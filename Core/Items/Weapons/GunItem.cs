@@ -7,73 +7,86 @@ using SoundType = Terraria.ModLoader.SoundType;
 
 namespace RangersArsenal.Core.Items.Weapons //Such namescape
 {
-    public struct GunSettings
+    // made into a class for default values. not sure if this is worth the overhead.
+    public class GunSettings
     {
-        public LegacySoundStyle useSound;
-        public float            spreadAngle;
+        public int              useTime          = 5;
+        public int              useAnimationTime = 10;
+        public int              useDelay         = 0;
+        public LegacySoundStyle useSound         = SoundID.Item11;
+        public LegacySoundStyle altUseSound      = SoundID.Item11;
+        public float            spreadAngle      = 1f;
+        public float            bulletSpeed      = 14f;
         
         // bools
-        public bool isFullAuto;
-        public bool isBurstFire;
-        public bool isFiresExtraRockets;
+        public bool isFullAuto          = true;
+        public bool isBurstFire         = false;
+        public bool isFiresExtraRockets = false;
+        public bool isRevolver          = false;
 
         // ammo changes
-        public int   convertedBulletType;
-        public float ammoSaveChance;
-        public int   burstCount;
+        public int   convertedBulletType = ProjectileID.Bullet;
+        public float ammoSaveChance      = 0f;
+        public int   burstCount          = 3;
         
         // rocket
-        public int rocketProjectileType;
-        public int burstsBetweenRockets;
-        public int rocketDamage;
+        public int rocketProjectileType = ProjectileID.Bullet;
+        public int burstsBetweenRockets = 0;
+        public int rocketDamage         = 25;
     }
     
     public abstract class GunItem : ModItem
     {
-        protected GunSettings gunSettings;
-        
-        protected virtual GunSettings GetGunSettings()
+        private GunSettings _gunSettings;
+        protected virtual GunSettings GunSettings => new GunSettings();
+
+        /*protected virtual GunSettings GetGunSettings()
         {
             // these settings will vary from gun-to-gun
-            return new GunSettings() {
-                useSound             = SoundID.Item11,
-                spreadAngle          = 1f,
-                isFullAuto           = true,
-                isBurstFire          = false,
-                isFiresExtraRockets  = false,
-                convertedBulletType  = ProjectileID.Bullet,
-                ammoSaveChance       = 0f,
-                burstCount           = 3,
+            /*return new GunSettings() {
+                useTime          = 5,
+                useAnimationTime = 10,
+                useDelay         = 0,
+                useSound         = SoundID.Item11,
+                altUseSound      = SoundID.Item11,
+                spreadAngle      = 1f,
+                bulletSpeed      = 14f,
+                
+                isFullAuto          = true,
+                isBurstFire         = false,
+                isFiresExtraRockets = false,
+                isRevolver          = false,
+                
+                convertedBulletType = ProjectileID.Bullet,
+                ammoSaveChance      = 0f,
+                burstCount          = 3,
+                
                 rocketProjectileType = mod.ProjectileType("SpikeBall"),
                 burstsBetweenRockets = 1,
                 rocketDamage         = 25,
-            };
-        }
-        
+            };#1#
+            return new GunSettings();
+        }*/
+
         // OVERRIDES
         public override void SetDefaults()
         {
             /*
-            item.damage     = 10;
-            item.crit       = 6;
-            item.knockBack  = 1;
-            item.shootSpeed = 12f;
-            
-            item.width  = 60;
-            item.height = 20;
-            item.scale  = 0.85f;
-            
-            item.useTime      = 3;
-            item.useAnimation = 10; // only necessary for non-burst guns
-            item.reuseDelay   = 14;
-            
-            item.value        = Item.sellPrice(0, 0, 1, 0);
-            item.rare         = ItemRarityID.White;
-            */
-            
+             * EXAMPLE OF WHAT NEEDS TO BE IN SetDefaults()
+             * item.damage     = 10;
+             * item.crit       = 6;
+             * item.knockBack  = 1;
+             * 
+             * item.width  = 60;
+             * item.height = 20;
+             * item.scale  = 0.85f;
+             * 
+             * item.value        = Item.sellPrice(0, 0, 1, 0);
+             * item.rare         = ItemRarityID.White;
+             */
+            _gunSettings = GunSettings;
             SetGunDefaults();
-            gunSettings = GetGunSettings();
-            SetGunSettings(gunSettings);
+            SetGunSettings(_gunSettings);
         }
 
         private void SetGunDefaults()
@@ -89,9 +102,12 @@ namespace RangersArsenal.Core.Items.Weapons //Such namescape
 
         private void SetGunSettings(GunSettings settings)
         {
+            item.useTime      = settings.useTime;
+            item.useAnimation = CalculateUseAnimation(settings.useAnimationTime);
+            item.reuseDelay   = settings.useDelay;
             item.autoReuse    = settings.isFullAuto;
-            item.useAnimation = CalculateUseAnimation(item.useAnimation);
             item.UseSound     = settings.useSound;
+            item.shootSpeed   = settings.bulletSpeed;
         }
 
         public override bool Shoot(
@@ -107,17 +123,22 @@ namespace RangersArsenal.Core.Items.Weapons //Such namescape
             var modPlayer = player.GetModPlayer<RAPlayer>();
             
             // converts bullets
-            if (type == ProjectileID.Bullet) type = gunSettings.convertedBulletType;
+            if (type == ProjectileID.Bullet) type = _gunSettings.convertedBulletType;
 
             // inaccuracy
-            var perturbedSpeed = new Vector2(speedX, speedY).RotatedByRandom(MathHelper.ToRadians(gunSettings.spreadAngle));
+            float spreadAngle = _gunSettings.spreadAngle;
+            if (_gunSettings.isRevolver && player.altFunctionUse == 2) {
+                spreadAngle = 15;
+                knockBack   =  item.knockBack * 2;
+            }
+            var perturbedSpeed = new Vector2(speedX, speedY).RotatedByRandom(MathHelper.ToRadians(spreadAngle));
             speedX = perturbedSpeed.X;
             speedY = perturbedSpeed.Y;
 
 
             // extra rocket that fires only during first burst
-            if (gunSettings.isBurstFire && !(player.itemAnimation < item.useAnimation - 2)) {
-                if (gunSettings.isFiresExtraRockets && modPlayer.numBullets == gunSettings.burstsBetweenRockets) {
+            if (_gunSettings.isBurstFire && !(player.itemAnimation < item.useAnimation - 2)) {
+                if (_gunSettings.isFiresExtraRockets && modPlayer.numBullets == _gunSettings.burstsBetweenRockets) {
                     var perturbedSpeed2 =
                         new Vector2(speedX * 2f, speedY * 2f).RotatedByRandom(MathHelper.ToRadians(5f));
                     speedX = perturbedSpeed2.X;
@@ -134,15 +155,15 @@ namespace RangersArsenal.Core.Items.Weapons //Such namescape
                         adjustedPosition.Y,
                         perturbedSpeed3.X,
                         perturbedSpeed3.Y,
-                        gunSettings.rocketProjectileType,
-                        gunSettings.rocketDamage,
+                        _gunSettings.rocketProjectileType,
+                        _gunSettings.rocketDamage,
                         5,
                         player.whoAmI
                     );
                 }
 
                 // fires every couple bursts
-                if (modPlayer.numBullets < gunSettings.burstsBetweenRockets)
+                if (modPlayer.numBullets < _gunSettings.burstsBetweenRockets)
                     modPlayer.numBullets++;
                 else
                     modPlayer.numBullets = 0;
@@ -153,17 +174,47 @@ namespace RangersArsenal.Core.Items.Weapons //Such namescape
 
         public override bool ConsumeAmmo(Player player)
         {
-            bool wontSaveAmmo = Main.rand.NextFloat() < 1f - gunSettings.ammoSaveChance;
+            // ammo saving
+            bool wontSaveAmmo = Main.rand.NextFloat() < 1f - _gunSettings.ammoSaveChance;
 
-            if (gunSettings.isBurstFire) {
+            // burst fire
+            if (_gunSettings.isBurstFire) {
                 bool willUseAmmoInBurst = !(player.itemAnimation < item.useAnimation - 2);
                 return willUseAmmoInBurst && wontSaveAmmo;
             }
+            
             return wontSaveAmmo;
+        }
+
+        public override bool CanUseItem(Player player)
+        {
+            if (!_gunSettings.isRevolver) return base.CanUseItem(player);
+
+            // revolver fan-the-hammer mode
+            if (player.altFunctionUse == 2) {
+                int altUseTime = (int)(_gunSettings.useTime / 2.5f);
+                item.useAnimation = altUseTime * 6;
+                item.useTime      = altUseTime;
+                item.reuseDelay   = 90;
+                item.UseSound     = _gunSettings.altUseSound;
+            } else {
+                item.useAnimation = _gunSettings.useAnimationTime;
+                item.useTime      = _gunSettings.useTime;
+                item.reuseDelay   = _gunSettings.useDelay;
+                item.UseSound     = _gunSettings.useSound;
+            }
+
+            return base.CanUseItem(player);
+        }
+
+        public override bool AltFunctionUse(Player player)
+        {
+            // enable revolver's fan-the-hammer mode
+            return _gunSettings.isRevolver;
         }
         
         private int CalculateUseAnimation(int defaultTime) {
-            return gunSettings.isBurstFire ? item.useTime * gunSettings.burstCount : defaultTime;
+            return _gunSettings.isBurstFire ? item.useTime * _gunSettings.burstCount : defaultTime;
         }
     }
 }
