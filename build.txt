@@ -1,0 +1,10 @@
+author = GTLugo
+version = 2.0.0.1
+displayName = Ranger's Arsenal
+homepage = https://forums.terraria.org/index.php?threads/extra-gunslinger-gear.59120/
+hideCode = true
+hideResources = true
+includeSource = false
+buildIgnore = *.csproj, *.user, obj\*, bin\*, .vs\*
+includePDB = true
+noCompile = false
