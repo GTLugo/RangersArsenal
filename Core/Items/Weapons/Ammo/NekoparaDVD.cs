@@ -8,7 +8,8 @@ namespace RangersArsenal.Core.Items.Weapons.Ammo //Such namescape
         public override void SetStaticDefaults()
         {
             DisplayName.SetDefault("Nekopara Collection");
-            Tooltip.SetDefault("'Young neko are so innocent and super cute. They're the best'");
+            Tooltip.SetDefault("Can be used as bullets by guns"
+                             + "'Young neko are so innocent and super cute. They're the best'");
         }
 
         public override void SetDefaults()
