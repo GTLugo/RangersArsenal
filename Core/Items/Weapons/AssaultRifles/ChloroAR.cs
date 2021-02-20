@@ -27,8 +27,8 @@ namespace RangersArsenal.Core.Items.Weapons.AssaultRifles //Such namescape
             item.width  = 66;
             item.height = 28;
             item.scale  = 1f;
-            
-            item.value = 165000;
+
+            item.value = Item.sellPrice(gold: 16, silver: 5);
             item.rare  = ItemRarityID.Yellow;
             
             base.SetDefaults();
