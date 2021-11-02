@@ -1,11 +1,1 @@
-Extra Gunslinger Gear 2.0!
-
-Ranger's Arsenal adds a variety of new ranged weapons, armors, and accessories. Additionally, it expands upon the hunter subclass (Ranger + Summoner) by adding more dedicated armor sets and accessories to the game.
-...and yes, it does add infinite ammo items (but they are deliberately harder to get to provide balance). 
-
-RECIPE MODS ARE RECOMMENDED WHILE THE WIKI IS BEING RECONSTRUCTED.
-
-In the near future, I will be releasing Melee's Arsenal, Magic's Arsenal, and Summoner's Arsenal; all of which will have the same goal of adding quality of life items for each respective class.
-
-More content is developed as I am willing & able.
-Please inform me of any bugs.
+Rangers Arsenal is a pretty cool mod, it does...this. Modify this file with a description of your mod.
