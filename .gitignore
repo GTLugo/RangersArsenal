@@ -5,6 +5,8 @@
 **/obj/
 **/packages/
 .vs
+.idea
+.vscode
 *.user
 *.suo
 *.cache
