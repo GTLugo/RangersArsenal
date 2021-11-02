@@ -14,10 +14,10 @@ namespace RangersArsenal
 {
     internal class RangersArsenal : Mod
     {
-        public const    int            maxExtraSlots = 3;
         internal static RangersArsenal instance;
-
-        private UserInterface       _accessorySlotUI;
+        
+        public const int maxExtraSlots = 3;
+        private UserInterface _accessorySlotUI;
         public  ExtraAccessorySlots extraAccessorySlots;
 
         public RangersArsenal()
