@@ -15,6 +15,16 @@ namespace RangersArsenal.Content.Items.Weapons {
         damage    = 10,
         crit      = 5,
         knockback = 10,
+        useDelay  = 10,
+      }},
+      {FireMode.Secondary, new GunStats{
+        damage           = 10,
+        crit             = 5,
+        knockback        = 10,
+        bulletsPerSpread = 5,
+        //bulletsPerBurst  = 3,
+        //useSound         = SoundID.Item31,
+        spreadAngle      = 15f,
       }}
     };
 
@@ -29,7 +39,7 @@ namespace RangersArsenal.Content.Items.Weapons {
       Item.height = 24;
       Item.scale  = 0.8f;
       Item.rare   = ItemRarityID.White;
-      Item.value  = Item.sellPrice(1, 0, 0, 0);
+      Item.value  = Item.sellPrice(1, 0, 0, 69);
 
       base.SetDefaults();
     }

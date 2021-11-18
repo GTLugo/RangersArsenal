@@ -15,20 +15,27 @@ namespace RangersArsenal.Content.Items.Weapons {
     Secondary,
     Bonus
   }
+  public enum GunType {
+    Rifle,
+    Revolver,
+    Sniper,
+    Shotgun
+  }
 
   public struct GunStats {
     public int   damage                 = 10;
-    public int   crit                   = 5;
+    public int   crit                   = 10;
     public float knockback              = 10;
-    public float bulletSpeed            = 14;
+    public float bulletSpeed            = 15;
 
-    public int   useTime                = 5;
-    public int   useAnimationTime       = 5;
-    public int   useDelay               = 0;
+    public int useTime                  = 5;
+    public int useDelay                 = 10;
+    public LegacySoundStyle useSound    = SoundID.Item11;
 
     public bool  isFullAuto             = false;
 
     public float spreadAngle            = 1;
+    public int   bulletsPerSpread       = 1;
     public int   bulletsPerBurst        = 1;
     public int   burstsBetweenEachBonus = 0;
     public float ammoSaveChance         = 0;
@@ -36,7 +43,7 @@ namespace RangersArsenal.Content.Items.Weapons {
     public bool  convertsBullets        = false;
     public int   convertedBulletType    = ProjectileID.Bullet;
 
-    public LegacySoundStyle useSound    = SoundID.Item11;
+    public GunType type                 = GunType.Rifle;
   }
 
   public abstract class BaseGun : ModItem {
@@ -84,7 +91,7 @@ namespace RangersArsenal.Content.Items.Weapons {
     //public bool isUsingPrimaryFire(Player player) => player.altFunctionUse == 1 && hasFireMode(FireMode.Primary);
     
     // UseAnimation for burst weapons: gunData_.isBurstFire ? Stats[mode].useTime * gunData_.burstCount : Stats[mode].useAnimationTime;
-    private int GetUseAnimation(FireMode mode) => Stats[mode].useAnimationTime;
+    private int GetUseAnimation(FireMode mode) => Stats[mode].useTime * Stats[mode].bulletsPerBurst;
 
     public bool IsUsingAltFire(Player player) => player.altFunctionUse == 2 && HasFireMode(FireMode.Secondary);
 
@@ -115,7 +122,11 @@ namespace RangersArsenal.Content.Items.Weapons {
       //     spreadAngle = 15;
       //     knockBack   =  item.knockBack * 2;
       // }
-      velocity = velocity.RotatedByRandom(MathHelper.ToRadians(Stats[currentFireMode].spreadAngle));
+
+      // Shotguns should not add more spread (it's already added when the bullets are spawned)
+      if (Stats[currentFireMode].bulletsPerSpread <= 1) {
+        velocity = velocity.RotatedByRandom(MathHelper.ToRadians(Stats[currentFireMode].spreadAngle));
+      }
     }
 
     public override bool Shoot(Player player,
@@ -124,7 +135,7 @@ namespace RangersArsenal.Content.Items.Weapons {
                                Vector2 velocity,
                                int type,
                                int damage,
-                               float knockBack) {
+                               float knockback) {
       var modPlayer = player.GetModPlayer<RangerGunPlayer>();
       var currentFireMode = CurrentFireMode(player);
 
@@ -140,7 +151,7 @@ namespace RangersArsenal.Content.Items.Weapons {
           var muzzleOffset     = Vector2.Normalize(velocity) * (player.itemWidth + 1);
           if (Collision.CanHit(adjustedPosition, 0, 0, adjustedPosition + muzzleOffset, 0, 0))
               adjustedPosition += muzzleOffset;
-          Projectile.NewProjectile(
+          Projectile.NewProjectileDirect(
             source,
             adjustedPosition,
             bonusVelocity,
@@ -157,6 +168,18 @@ namespace RangersArsenal.Content.Items.Weapons {
         else
             modPlayer.numBullets = 0;
       }
+
+      
+      for (int i = 0; i < Stats[currentFireMode].bulletsPerSpread - 1; i++) { // shotguns skip 1 bullet (original bullet)
+				// Rotate the velocity randomly by 30 degrees at max.
+				var newVelocity = velocity.RotatedByRandom(MathHelper.ToRadians(Stats[currentFireMode].spreadAngle));
+
+				// Decrease velocity randomly for nicer visuals.
+				newVelocity *= 1f - Main.rand.NextFloat(0.3f);
+
+				// Create a projectile.
+				Projectile.NewProjectileDirect(source, position, newVelocity, type, damage, knockback, player.whoAmI);
+			}
 
       return true;
     }
