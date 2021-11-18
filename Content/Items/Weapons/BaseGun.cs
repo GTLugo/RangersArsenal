@@ -23,7 +23,7 @@ namespace RangersArsenal.Content.Items.Weapons {
     public float bulletSpeed            = 14;
 
     public int   useTime                = 5;
-    public int   useAnimationTime       = 10;
+    public int   useAnimationTime       = 5;
     public int   useDelay               = 0;
 
     public bool  isFullAuto             = false;
