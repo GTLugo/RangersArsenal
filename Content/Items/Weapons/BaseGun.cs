@@ -81,14 +81,14 @@ namespace RangersArsenal.Content.Items.Weapons {
       Item.UseSound     = Stats[mode].useSound;
     }
 
-    //public bool shouldPrimaryFire(Player player) => player.altFunctionUse == 1 && hasFireMode(FireMode.Primary);
+    //public bool isUsingPrimaryFire(Player player) => player.altFunctionUse == 1 && hasFireMode(FireMode.Primary);
 
-    public bool shouldSecondaryFire(Player player) => player.altFunctionUse == 2 && hasFireMode(FireMode.Secondary);
+    public bool isUsingAltFire(Player player) => player.altFunctionUse == 2 && hasFireMode(FireMode.Secondary);
 
     public bool hasFireMode(FireMode mode) => Stats.ContainsKey(mode);
 
     public FireMode currentFireMode(Player player) {
-      if (shouldSecondaryFire(player)) {
+      if (isUsingAltFire(player)) {
         return FireMode.Secondary;
       } else {
         return FireMode.Primary;
