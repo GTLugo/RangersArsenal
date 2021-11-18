@@ -22,6 +22,7 @@ namespace RangersArsenal.Content.Items.Weapons {
     public float knockback              = 10;
     public float bulletSpeed            = 14;
 
+    public bool  isFullAuto             = false;
     public int   useTime                = 5;
     public int   useAnimationTime       = 10;
     public int   useDelay               = 0;
@@ -31,7 +32,6 @@ namespace RangersArsenal.Content.Items.Weapons {
     public int   burstsBetweenEachBonus = 0;
     public float ammoSaveChance         = 0;
 
-    public bool  isFullAuto             = false;
 
     public bool  convertsBullets        = false;
     public int   projectileType         = ProjectileID.Bullet;
@@ -67,7 +67,6 @@ namespace RangersArsenal.Content.Items.Weapons {
 
     private void ApplyGunSettings(FireMode mode) {
       // Stats
-      
       Item.damage     = Stats[mode].damage;
       Item.crit       = Stats[mode].crit;
       Item.knockBack  = Stats[mode].knockback;
@@ -75,14 +74,26 @@ namespace RangersArsenal.Content.Items.Weapons {
 
       // Usage
       Item.useTime      = Stats[mode].useTime;
-      Item.useAnimation = CalculateUseAnimation(Stats[mode].useAnimationTime);
+      Item.useAnimation = CalculateUseAnimation(mode);
       Item.reuseDelay   = Stats[mode].useDelay;
 
       Item.autoReuse    = Stats[mode].isFullAuto;
       Item.UseSound     = Stats[mode].useSound;
     }
 
+    //public bool shouldPrimaryFire(Player player) => player.altFunctionUse == 1 && hasFireMode(FireMode.Primary);
+
+    public bool shouldSecondaryFire(Player player) => player.altFunctionUse == 2 && hasFireMode(FireMode.Secondary);
+
     public bool hasFireMode(FireMode mode) => Stats.ContainsKey(mode);
+
+    public FireMode currentFireMode(Player player) {
+      if (shouldSecondaryFire(player)) {
+        return FireMode.Secondary;
+      } else {
+        return FireMode.Primary;
+      }
+    }
 
     public override bool Shoot(Player player,
                                ProjectileSource_Item_WithAmmo source,
@@ -146,11 +157,7 @@ namespace RangersArsenal.Content.Items.Weapons {
     public override bool CanConsumeAmmo(Player player) {
       bool isBurstFire = false;
       float ammoSaveChance = 0;
-      if (player.altFunctionUse == 2 && hasFireMode(FireMode.Secondary)) {
-        ammoSaveChance = Stats[FireMode.Secondary].ammoSaveChance;
-      } else if (hasFireMode(FireMode.Primary)) {
-        ammoSaveChance = Stats[FireMode.Primary].ammoSaveChance;
-      }
+      ammoSaveChance = Stats[currentFireMode(player)].ammoSaveChance;
 
       bool wontSaveAmmo = Main.rand.NextFloat() < 1f - ammoSaveChance;
       if (isBurstFire) {
@@ -163,17 +170,13 @@ namespace RangersArsenal.Content.Items.Weapons {
 
     /// TODO: Needs to be redone to allow custom alt fire
     public override bool CanUseItem(Player player) {
-      if (player.altFunctionUse == 2 && hasFireMode(FireMode.Secondary)) {
-        ApplyGunSettings(FireMode.Secondary);
-      } else if (hasFireMode(FireMode.Primary)) {
-        ApplyGunSettings(FireMode.Primary);
-      }
+      ApplyGunSettings(currentFireMode(player));
       return base.CanUseItem(player);
     }
 
-    public override bool AltFunctionUse(Player player) => Settings.hasFireMode.value(FireMode.Secondary);
+    public override bool AltFunctionUse(Player player) => hasFireMode(FireMode.Secondary);
     
-    private int CalculateUseAnimation(int defaultTime) => 
-      gunData_.isBurstFire ? Item.useTime * gunData_.burstCount : defaultTime;
+    private int CalculateUseAnimation(FireMode mode) => Stats[mode].useAnimationTime;
+      //gunData_.isBurstFire ? Stats[mode].useTime * gunData_.burstCount : Stats[mode].useAnimationTime;
   }
 }
