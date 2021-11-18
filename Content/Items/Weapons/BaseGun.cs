@@ -22,19 +22,19 @@ namespace RangersArsenal.Content.Items.Weapons {
     public float knockback              = 10;
     public float bulletSpeed            = 14;
 
-    public bool  isFullAuto             = false;
     public int   useTime                = 5;
     public int   useAnimationTime       = 10;
     public int   useDelay               = 0;
+
+    public bool  isFullAuto             = false;
 
     public float spreadAngle            = 1;
     public int   bulletsPerBurst        = 1;
     public int   burstsBetweenEachBonus = 0;
     public float ammoSaveChance         = 0;
 
-
     public bool  convertsBullets        = false;
-    public int   projectileType         = ProjectileID.Bullet;
+    public int   convertedBulletType    = ProjectileID.Bullet;
 
     public LegacySoundStyle useSound    = SoundID.Item11;
   }
@@ -74,7 +74,7 @@ namespace RangersArsenal.Content.Items.Weapons {
 
       // Usage
       Item.useTime      = Stats[mode].useTime;
-      Item.useAnimation = CalculateUseAnimation(mode);
+      Item.useAnimation = GetUseAnimation(mode); // For burst weapons, useAnimation is non-trivial
       Item.reuseDelay   = Stats[mode].useDelay;
 
       Item.autoReuse    = Stats[mode].isFullAuto;
@@ -82,17 +82,40 @@ namespace RangersArsenal.Content.Items.Weapons {
     }
 
     //public bool isUsingPrimaryFire(Player player) => player.altFunctionUse == 1 && hasFireMode(FireMode.Primary);
+    
+    // UseAnimation for burst weapons: gunData_.isBurstFire ? Stats[mode].useTime * gunData_.burstCount : Stats[mode].useAnimationTime;
+    private int GetUseAnimation(FireMode mode) => Stats[mode].useAnimationTime;
 
-    public bool isUsingAltFire(Player player) => player.altFunctionUse == 2 && hasFireMode(FireMode.Secondary);
+    public bool IsUsingAltFire(Player player) => player.altFunctionUse == 2 && HasFireMode(FireMode.Secondary);
 
-    public bool hasFireMode(FireMode mode) => Stats.ContainsKey(mode);
+    public bool HasFireMode(FireMode mode) => Stats.ContainsKey(mode);
 
-    public FireMode currentFireMode(Player player) {
-      if (isUsingAltFire(player)) {
+    public FireMode CurrentFireMode(Player player) {
+      if (IsUsingAltFire(player)) {
         return FireMode.Secondary;
       } else {
         return FireMode.Primary;
       }
+    }
+
+    public override void ModifyShootStats(Player player, 
+                                          ref Vector2 position, 
+                                          ref Vector2 velocity, 
+                                          ref int type, 
+                                          ref int damage, 
+                                          ref float knockback) {
+      var currentFireMode = CurrentFireMode(player);
+      
+      // converts bullets
+      if (type == ProjectileID.Bullet) type = Stats[currentFireMode].convertedBulletType;
+
+      // inaccuracy
+      // float spreadAngle = Stats[currentFireMode].spreadAngle;
+      // if (_gunSettings.isRevolver && player.altFunctionUse == 2) {
+      //     spreadAngle = 15;
+      //     knockBack   =  item.knockBack * 2;
+      // }
+      velocity = velocity.RotatedByRandom(MathHelper.ToRadians(Stats[currentFireMode].spreadAngle));
     }
 
     public override bool Shoot(Player player,
@@ -102,53 +125,37 @@ namespace RangersArsenal.Content.Items.Weapons {
                                int type,
                                int damage,
                                float knockBack) {
-      var modPlayer = player.GetModPlayer<RAPlayer>();
-      
-      // converts bullets
-      if (type == ProjectileID.Bullet) type = _gunSettings.convertedBulletType;
-
-      // inaccuracy
-      float spreadAngle = _gunSettings.spreadAngle;
-      if (_gunSettings.isRevolver && player.altFunctionUse == 2) {
-          spreadAngle = 15;
-          knockBack   =  item.knockBack * 2;
-      }
-      var perturbedSpeed = new Vector2(speedX, speedY).RotatedByRandom(MathHelper.ToRadians(spreadAngle));
-      speedX = perturbedSpeed.X;
-      speedY = perturbedSpeed.Y;
-
+      var modPlayer = player.GetModPlayer<RangerGunPlayer>();
+      var currentFireMode = CurrentFireMode(player);
 
       // extra rocket that fires only during first burst
-      if (_gunSettings.isBurstFire && !(player.itemAnimation < item.useAnimation - 2)) {
-          if (_gunSettings.isFiresExtraRockets && modPlayer.numBullets == _gunSettings.burstsBetweenRockets) {
-              var perturbedSpeed2 =
-                  new Vector2(speedX * 2f, speedY * 2f).RotatedByRandom(MathHelper.ToRadians(5f));
-              speedX = perturbedSpeed2.X;
-              speedY = perturbedSpeed2.Y;
-              var perturbedSpeed3 = new Vector2(speedX, speedY);
+      if (!(player.itemAnimation < Item.useAnimation - 2)) {
+        if (HasFireMode(FireMode.Bonus) && modPlayer.numBullets == Stats[currentFireMode].burstsBetweenEachBonus) {
+          var bonusVelocity = velocity;
+          bonusVelocity.Normalize();
+          bonusVelocity = (bonusVelocity * (Stats[FireMode.Bonus].bulletSpeed)).RotatedByRandom(MathHelper.ToRadians(Stats[FireMode.Bonus].spreadAngle));
 
-              // muzzle offset
-              var adjustedPosition = position;
-              var muzzleOffset     = Vector2.Normalize(new Vector2(speedX, speedY)) * (player.itemWidth + 1);
-              if (Collision.CanHit(adjustedPosition, 0, 0, adjustedPosition + muzzleOffset, 0, 0))
-                  adjustedPosition += muzzleOffset;
-              Projectile.NewProjectile(
-                  adjustedPosition.X,
-                  adjustedPosition.Y,
-                  perturbedSpeed3.X,
-                  perturbedSpeed3.Y,
-                  _gunSettings.rocketProjectileType,
-                  _gunSettings.rocketDamage,
-                  5,
-                  player.whoAmI
-              );
-          }
+          // muzzle offset
+          var adjustedPosition = position;
+          var muzzleOffset     = Vector2.Normalize(velocity) * (player.itemWidth + 1);
+          if (Collision.CanHit(adjustedPosition, 0, 0, adjustedPosition + muzzleOffset, 0, 0))
+              adjustedPosition += muzzleOffset;
+          Projectile.NewProjectile(
+            source,
+            adjustedPosition,
+            bonusVelocity,
+            Stats[FireMode.Bonus].convertedBulletType,
+            Stats[FireMode.Bonus].damage,
+            Stats[FireMode.Bonus].knockback,
+            player.whoAmI
+          );
+        }
 
-          // fires every couple bursts
-          if (modPlayer.numBullets < _gunSettings.burstsBetweenRockets)
-              modPlayer.numBullets++;
-          else
-              modPlayer.numBullets = 0;
+        // fires every couple bursts
+        if (modPlayer.numBullets < Stats[currentFireMode].burstsBetweenEachBonus)
+            modPlayer.numBullets++;
+        else
+            modPlayer.numBullets = 0;
       }
 
       return true;
@@ -157,7 +164,7 @@ namespace RangersArsenal.Content.Items.Weapons {
     public override bool CanConsumeAmmo(Player player) {
       bool isBurstFire = false;
       float ammoSaveChance = 0;
-      ammoSaveChance = Stats[currentFireMode(player)].ammoSaveChance;
+      ammoSaveChance = Stats[CurrentFireMode(player)].ammoSaveChance;
 
       bool wontSaveAmmo = Main.rand.NextFloat() < 1f - ammoSaveChance;
       if (isBurstFire) {
@@ -170,13 +177,18 @@ namespace RangersArsenal.Content.Items.Weapons {
 
     /// TODO: Needs to be redone to allow custom alt fire
     public override bool CanUseItem(Player player) {
-      ApplyGunSettings(currentFireMode(player));
+      ApplyGunSettings(CurrentFireMode(player));
       return base.CanUseItem(player);
     }
 
-    public override bool AltFunctionUse(Player player) => hasFireMode(FireMode.Secondary);
-    
-    private int CalculateUseAnimation(FireMode mode) => Stats[mode].useAnimationTime;
-      //gunData_.isBurstFire ? Stats[mode].useTime * gunData_.burstCount : Stats[mode].useAnimationTime;
+    public override bool AltFunctionUse(Player player) => HasFireMode(FireMode.Secondary);
+  }
+
+  public class RangerGunPlayer : ModPlayer {
+    public int numBullets;
+
+    public override void ResetEffects() {
+      if (numBullets < 0) numBullets = 0;
+    }
   }
 }
